@@ -1,0 +1,329 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>每日打卡游戏</title>
+    <style>
+        body {
+            font-family: 'Arial', sans-serif;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            margin: 0;
+            padding: 0;
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            color: white;
+        }
+        
+        .container {
+            text-align: center;
+            background: rgba(255, 255, 255, 0.1);
+            padding: 40px;
+            border-radius: 20px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+            backdrop-filter: blur(10px);
+            max-width: 500px;
+            width: 90%;
+        }
+        
+        h1 {
+            font-size: 2.5em;
+            margin-bottom: 30px;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
+        }
+        
+        .checkin-btn {
+            background: #ff6b6b;
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            font-size: 1.2em;
+            border-radius: 50px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(255, 107, 107, 0.4);
+        }
+        
+        .checkin-btn:hover {
+            background: #ff5252;
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(255, 107, 107, 0.6);
+        }
+        
+        .checkin-btn:disabled {
+            background: #cccccc;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+        
+        .streak-info {
+            margin: 20px 0;
+            font-size: 1.2em;
+        }
+        
+        .last-checkin {
+            margin-top: 20px;
+            font-style: italic;
+            opacity: 0.8;
+        }
+        
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+            animation: fadeIn 0.3s ease;
+        }
+        
+        .modal-content {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            margin: 15% auto;
+            padding: 40px;
+            border-radius: 20px;
+            width: 80%;
+            max-width: 500px;
+            text-align: center;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+            animation: slideIn 0.3s ease;
+            color: white;
+            border: 3px solid #fff;
+        }
+        
+        .close {
+            color: white;
+            float: right;
+            font-size: 28px;
+            font-weight: bold;
+            cursor: pointer;
+            line-height: 1;
+        }
+        
+        .blessing-text {
+            font-size: 1.4em;
+            margin: 20px 0;
+            line-height: 1.6;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+        
+        @keyframes slideIn {
+            from { transform: translateY(-50px); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
+        
+        .confetti {
+            position: absolute;
+            width: 10px;
+            height: 10px;
+            background-color: #f00;
+            opacity: 0.7;
+            animation: fall linear forwards;
+        }
+        
+        @keyframes fall {
+            to {
+                transform: translateY(100vh) rotate(360deg);
+                opacity: 0;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🎯 每日打卡</h1>
+        <p>坚持每天打卡，获得专属祝福！</p>
+        
+        <div class="streak-info">
+            <p>连续打卡天数: <span id="streakCount">0</span> 天</p>
+        </div>
+        
+        <button id="checkinBtn" class="checkin-btn">点击打卡</button>
+        
+        <div id="lastCheckin" class="last-checkin"></div>
+    </div>
+    
+    <!-- 祝福语弹窗 -->
+    <div id="blessingModal" class="modal">
+        <div class="modal-content">
+            <span class="close">&times;</span>
+            <h2>🎉 打卡成功！</h2>
+            <div class="blessing-text" id="blessingText"></div>
+            <p>今天是美好的一天，继续加油！</p>
+        </div>
+    </div>
+
+    <script>
+        // 祝福语文案库
+        const blessings = [
+            "今天的努力，是幸运的伏笔，愿你今日收获满满！",
+            "每一个清晨都是新的开始，愿你的每一天都充满希望！",
+            "坚持打卡的你真棒，愿你所有的梦想都能成真！",
+            "今日份的好运已充值，请注意查收！",
+            "阳光正好，微风不燥，愿你的心情也如此美好！",
+            "每一次坚持都是对自己的承诺，愿你越来越优秀！",
+            "新的一天，新的机遇，愿你把握住每一个可能！",
+            "愿你的笑容如晨光般灿烂，心情如春风般舒畅！",
+            "努力的人运气不会太差，愿你被世界温柔以待！",
+            "今天的付出，是为了明天更好的自己，加油！",
+            "保持热爱，奔赴山海，愿你的人生精彩纷呈！",
+            "每一个平凡的日子，都值得被认真对待，祝你开心！",
+            "愿你的每一份努力都被认可，每一份付出都有回报！",
+            "生活虽有挑战，但你比困难更强大，相信自己！",
+            "今天也要开心呀，愿所有美好如约而至！"
+        ];
+        
+        // DOM元素
+        const checkinBtn = document.getElementById('checkinBtn');
+        const streakCount = document.getElementById('streakCount');
+        const lastCheckin = document.getElementById('lastCheckin');
+        const modal = document.getElementById('blessingModal');
+        const blessingText = document.getElementById('blessingText');
+        const closeBtn = document.querySelector('.close');
+        
+        // 获取本地存储的数据
+        function getStoredData() {
+            const data = localStorage.getItem('dailyCheckin');
+            return data ? JSON.parse(data) : null;
+        }
+        
+        // 保存数据到本地存储
+        function saveData(data) {
+            localStorage.setItem('dailyCheckin', JSON.stringify(data));
+        }
+        
+        // 获取随机祝福语
+        function getRandomBlessing() {
+            const randomIndex = Math.floor(Math.random() * blessings.length);
+            return blessings[randomIndex];
+        }
+        
+        // 创建彩带动画效果
+        function createConfetti() {
+            const container = document.body;
+            for (let i = 0; i < 50; i++) {
+                const confetti = document.createElement('div');
+                confetti.className = 'confetti';
+                confetti.style.left = Math.random() * 100 + 'vw';
+                confetti.style.backgroundColor = `hsl(${Math.random() * 360}, 100%, 50%)`;
+                confetti.style.animationDuration = (Math.random() * 3 + 2) + 's';
+                container.appendChild(confetti);
+                
+                // 动画结束后移除元素
+                setTimeout(() => {
+                    confetti.remove();
+                }, 5000);
+            }
+        }
+        
+        // 初始化页面
+        function initPage() {
+            const storedData = getStoredData();
+            
+            if (storedData) {
+                streakCount.textContent = storedData.streak;
+                
+                // 检查是否已经打卡过今天
+                const today = new Date().toDateString();
+                if (storedData.lastCheckinDate === today) {
+                    checkinBtn.disabled = true;
+                    checkinBtn.textContent = '今日已打卡';
+                    lastCheckin.textContent = `最后打卡: ${storedData.lastCheckinDisplay}`;
+                } else {
+                    // 检查是否是连续打卡
+                    const yesterday = new Date();
+                    yesterday.setDate(yesterday.getDate() - 1);
+                    
+                    if (storedData.lastCheckinDate !== yesterday.toDateString()) {
+                        // 如果不是连续打卡，则重置连续天数
+                        storedData.streak = 0;
+                        saveData(storedData);
+                        streakCount.textContent = '0';
+                    }
+                }
+            } else {
+                // 首次使用，初始化数据
+                const initialData = {
+                    streak: 0,
+                    lastCheckinDate: null,
+                    lastCheckinDisplay: ''
+                };
+                saveData(initialData);
+            }
+        }
+        
+        // 执行打卡操作
+        function performCheckin() {
+            const storedData = getStoredData();
+            const today = new Date();
+            const todayStr = today.toDateString();
+            const displayDate = today.getFullYear() + '-' + 
+                               String(today.getMonth() + 1).padStart(2, '0') + '-' + 
+                               String(today.getDate()).padStart(2, '0');
+            
+            // 更新连续天数
+            let yesterday = new Date();
+            yesterday.setDate(yesterday.getDate() - 1);
+            
+            if (!storedData.lastCheckinDate || storedData.lastCheckinDate === yesterday.toDateString()) {
+                storedData.streak += 1;
+            } else if (storedData.lastCheckinDate === todayStr) {
+                // 已经打过卡了
+                return;
+            } else {
+                // 中断了连续，重新开始
+                storedData.streak = 1;
+            }
+            
+            storedData.lastCheckinDate = todayStr;
+            storedData.lastCheckinDisplay = displayDate;
+            
+            saveData(storedData);
+            
+            // 更新界面
+            streakCount.textContent = storedData.streak;
+            checkinBtn.disabled = true;
+            checkinBtn.textContent = '今日已打卡';
+            lastCheckin.textContent = `最后打卡: ${displayDate}`;
+            
+            // 显示祝福语
+            showBlessing();
+            
+            // 创建庆祝效果
+            createConfetti();
+        }
+        
+        // 显示祝福语弹窗
+        function showBlessing() {
+            const blessing = getRandomBlessing();
+            blessingText.textContent = blessing;
+            modal.style.display = 'block';
+        }
+        
+        // 事件监听器
+        checkinBtn.addEventListener('click', performCheckin);
+        
+        closeBtn.addEventListener('click', () => {
+            modal.style.display = 'none';
+        });
+        
+        window.addEventListener('click', (event) => {
+            if (event.target === modal) {
+                modal.style.display = 'none';
+            }
+        });
+        
+        // 初始化页面
+        initPage();
+    </script>
+</body>
+</html>
